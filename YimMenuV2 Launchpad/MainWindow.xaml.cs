@@ -126,12 +126,12 @@ namespace YimMenuV2_Launchpad
         private const uint INFINITE = 0xFFFFFFFF;
 
         // Variables for process monitoring
-        private DispatcherTimer processMonitorTimer;
+        private DispatcherTimer? processMonitorTimer;
         private bool isGameRunning = false;
         private const string TARGET_PROCESS_NAME = "GTA5_Enhanced";
 
         // Configuration variables
-        private string configFilePath;
+        private string configFilePath = string.Empty;
         private const string CONFIG_FILE_NAME = "launchpad_config.txt";
         private const string HASH_FILE_NAME = "hash.txt";
         private const string GITHUB_API_URL =
@@ -312,7 +312,7 @@ namespace YimMenuV2_Launchpad
             CheckGameProcess();
         }
 
-        private void ProcessMonitorTimer_Tick(object sender, EventArgs e)
+        private void ProcessMonitorTimer_Tick(object? sender, EventArgs e)
         {
             CheckGameProcess();
         }
@@ -431,7 +431,7 @@ namespace YimMenuV2_Launchpad
                             + @"\Steam\Steam.exe",
                     };
 
-                    string steamPath = steamPaths.FirstOrDefault(File.Exists);
+                    string? steamPath = steamPaths.FirstOrDefault(File.Exists);
 
                     if (!string.IsNullOrEmpty(steamPath))
                     {
@@ -741,7 +741,7 @@ namespace YimMenuV2_Launchpad
 
                 // Get the latest release information
                 var latestRelease = await GetLatestReleaseAsync();
-                if (latestRelease == null)
+                if (latestRelease?.Assets == null)
                 {
                     // UpdateStatus("Failed to check for updates from GitHub API");
                     return false;
