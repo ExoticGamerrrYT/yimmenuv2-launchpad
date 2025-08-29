@@ -1,15 +1,37 @@
 ﻿using System.Diagnostics;
 using System.IO;
+using System.Net.Http;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
+using Newtonsoft.Json;
 
 namespace YimMenuV2_Launchpad
 {
+    // Classes to deserialize GitHub API response
+    public class GitHubRelease
+    {
+        [JsonProperty("assets")]
+        public List<GitHubAsset> Assets { get; set; } = new List<GitHubAsset>();
+    }
+
+    public class GitHubAsset
+    {
+        [JsonProperty("name")]
+        public string Name { get; set; } = string.Empty;
+
+        [JsonProperty("digest")]
+        public string Digest { get; set; } = string.Empty;
+
+        [JsonProperty("browser_download_url")]
+        public string BrowserDownloadUrl { get; set; } = string.Empty;
+    }
+
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
@@ -103,14 +125,27 @@ namespace YimMenuV2_Launchpad
         private const uint PAGE_READWRITE = 4;
         private const uint INFINITE = 0xFFFFFFFF;
 
-        // Variables para el monitoreo del proceso
+        // Variables for process monitoring
         private DispatcherTimer processMonitorTimer;
         private bool isGameRunning = false;
         private const string TARGET_PROCESS_NAME = "GTA5_Enhanced";
 
-        // Variables para configuración
+        // Configuration variables
         private string configFilePath;
         private const string CONFIG_FILE_NAME = "launchpad_config.txt";
+        private const string HASH_FILE_NAME = "hash.txt";
+        private const string GITHUB_API_URL =
+            "https://api.github.com/repos/YimMenu/YimMenuV2/releases/tags/nightly";
+
+        // HttpClient for HTTP requests
+        private static readonly HttpClient httpClient = CreateHttpClient();
+
+        private static HttpClient CreateHttpClient()
+        {
+            var client = new HttpClient();
+            client.DefaultRequestHeaders.Add("User-Agent", "YimMenuV2-Launchpad/1.0");
+            return client;
+        }
 
         public MainWindow()
         {
@@ -119,22 +154,25 @@ namespace YimMenuV2_Launchpad
             LoadConfiguration();
             InitializeProcessMonitor();
 
-            // Conectar el evento para guardar la configuración cuando cambie la selección
+            // Connect the event to save configuration when selection changes
             PlatformComboBox.SelectionChanged += PlatformComboBox_SelectionChanged;
+
+            // Check for updates on startup
+            _ = CheckForUpdatesAsync();
         }
 
         private bool InjectDLL(string processName, string dllPath)
         {
             try
             {
-                // Verificar que el DLL existe
+                // Verify that the DLL exists
                 if (!File.Exists(dllPath))
                 {
                     UpdateStatus($"Error: DLL not found at {dllPath}");
                     return false;
                 }
 
-                // Buscar el proceso
+                // Find the process
                 Process[] processes = Process.GetProcessesByName(processName);
                 if (processes.Length == 0)
                 {
@@ -147,7 +185,7 @@ namespace YimMenuV2_Launchpad
                 Process targetProcess = processes[0];
                 UpdateStatus($"Found process {processName} (PID: {targetProcess.Id})");
 
-                // Abrir el proceso con los permisos necesarios
+                // Open the process with necessary permissions
                 IntPtr processHandle = OpenProcess(
                     PROCESS_CREATE_THREAD
                         | PROCESS_QUERY_INFORMATION
@@ -168,7 +206,7 @@ namespace YimMenuV2_Launchpad
 
                 try
                 {
-                    // Obtener la dirección de LoadLibraryA
+                    // Get LoadLibraryA address
                     IntPtr kernel32Handle = GetModuleHandle("kernel32.dll");
                     IntPtr loadLibraryAddr = GetProcAddress(kernel32Handle, "LoadLibraryA");
 
@@ -178,10 +216,10 @@ namespace YimMenuV2_Launchpad
                         return false;
                     }
 
-                    // Convertir la ruta del DLL a bytes
+                    // Convert DLL path to bytes
                     byte[] dllBytes = Encoding.ASCII.GetBytes(dllPath + "\0");
 
-                    // Reservar memoria en el proceso objetivo
+                    // Reserve memory in target process
                     IntPtr allocMemAddress = VirtualAllocEx(
                         processHandle,
                         IntPtr.Zero,
@@ -198,7 +236,7 @@ namespace YimMenuV2_Launchpad
 
                     try
                     {
-                        // Escribir la ruta del DLL en la memoria del proceso
+                        // Write DLL path to process memory
                         if (
                             !WriteProcessMemory(
                                 processHandle,
@@ -215,7 +253,7 @@ namespace YimMenuV2_Launchpad
                             return false;
                         }
 
-                        // Crear un hilo remoto que ejecute LoadLibraryA
+                        // Create a remote thread that executes LoadLibraryA
                         IntPtr threadHandle = CreateRemoteThread(
                             processHandle,
                             IntPtr.Zero,
@@ -234,7 +272,7 @@ namespace YimMenuV2_Launchpad
 
                         try
                         {
-                            // Esperar a que el hilo termine
+                            // Wait for the thread to finish
                             WaitForSingleObject(threadHandle, INFINITE);
                             UpdateStatus("DLL injection completed successfully!");
                             return true;
@@ -246,7 +284,7 @@ namespace YimMenuV2_Launchpad
                     }
                     finally
                     {
-                        // Liberar la memoria reservada
+                        // Free the reserved memory
                         VirtualFreeEx(processHandle, allocMemAddress, 0, MEM_RELEASE);
                     }
                 }
@@ -264,13 +302,13 @@ namespace YimMenuV2_Launchpad
 
         private void InitializeProcessMonitor()
         {
-            // Crear timer para verificar el proceso cada 2 segundos
+            // Create timer to check process every 2 seconds
             processMonitorTimer = new DispatcherTimer();
             processMonitorTimer.Interval = TimeSpan.FromSeconds(2);
             processMonitorTimer.Tick += ProcessMonitorTimer_Tick;
             processMonitorTimer.Start();
 
-            // Verificar inmediatamente al iniciar
+            // Check immediately on startup
             CheckGameProcess();
         }
 
@@ -286,7 +324,7 @@ namespace YimMenuV2_Launchpad
                 Process[] processes = Process.GetProcessesByName(TARGET_PROCESS_NAME);
                 bool gameCurrentlyRunning = processes.Length > 0;
 
-                // Solo actualizar si el estado cambió
+                // Only update if state changed
                 if (gameCurrentlyRunning != isGameRunning)
                 {
                     isGameRunning = gameCurrentlyRunning;
@@ -295,7 +333,7 @@ namespace YimMenuV2_Launchpad
             }
             catch (Exception ex)
             {
-                // Error silencioso para no spam en el status
+                // Silent error to avoid spamming status
                 System.Diagnostics.Debug.WriteLine($"Error checking process: {ex.Message}");
             }
         }
@@ -306,15 +344,15 @@ namespace YimMenuV2_Launchpad
             {
                 if (isGameRunning)
                 {
-                    // Game está corriendo: Launch oscuro, Inject azul
-                    SetButtonStyle(LaunchButton, false); // false = estilo oscuro
-                    SetButtonStyle(InjectButton, true); // true = estilo azul
+                    // Game is running: Launch dark, Inject blue
+                    SetButtonStyle(LaunchButton, false); // false = dark style
+                    SetButtonStyle(InjectButton, true); // true = blue style
                 }
                 else
                 {
-                    // Game NO está corriendo: Launch azul, Inject oscuro
-                    SetButtonStyle(LaunchButton, true); // true = estilo azul
-                    SetButtonStyle(InjectButton, false); // false = estilo oscuro
+                    // Game NOT running: Launch blue, Inject dark
+                    SetButtonStyle(LaunchButton, true); // true = blue style
+                    SetButtonStyle(InjectButton, false); // false = dark style
                 }
             }
             catch (Exception ex)
@@ -329,7 +367,7 @@ namespace YimMenuV2_Launchpad
             {
                 if (isPrimary)
                 {
-                    // Estilo azul (Primary)
+                    // Blue style (Primary)
                     button.Background = new SolidColorBrush(
                         (Color)ColorConverter.ConvertFromString("#0078D4")
                     );
@@ -339,7 +377,7 @@ namespace YimMenuV2_Launchpad
                 }
                 else
                 {
-                    // Estilo oscuro (Modern)
+                    // Dark style (Modern)
                     button.Background = new SolidColorBrush(
                         (Color)ColorConverter.ConvertFromString("#2D2D30")
                     );
@@ -360,12 +398,12 @@ namespace YimMenuV2_Launchpad
             {
                 UpdateStatus("Attempting to launch GTA V via Steam...");
 
-                // Método 1: Intentar lanzar usando steam:// protocol
+                // Method 1: Try launching using steam:// protocol
                 try
                 {
                     var steamProcess = new ProcessStartInfo
                     {
-                        FileName = "steam://run/3240220", // App ID correcto para GTA V
+                        FileName = "steam://run/3240220", // Correct App ID for GTA V
                         UseShellExecute = true,
                     };
                     Process.Start(steamProcess);
@@ -379,10 +417,10 @@ namespace YimMenuV2_Launchpad
                     );
                 }
 
-                // Método 2: Intentar lanzar Steam directamente con parámetros
+                // Method 2: Try launching Steam directly with parameters
                 try
                 {
-                    // Buscar Steam en ubicaciones comunes
+                    // Look for Steam in common locations
                     string[] steamPaths =
                     {
                         @"C:\Program Files (x86)\Steam\Steam.exe",
@@ -417,7 +455,7 @@ namespace YimMenuV2_Launchpad
                     UpdateStatus($"❌ Failed to launch via Steam executable: {ex.Message}");
                 }
 
-                // Método 3: Abrir Steam y mostrar mensaje
+                // Method 3: Open Steam and show message
                 try
                 {
                     var steamProcess = new ProcessStartInfo
@@ -445,28 +483,28 @@ namespace YimMenuV2_Launchpad
         {
             try
             {
-                // Define la ruta de la carpeta de YimMenuV2
+                // Define the YimMenuV2 folder path
                 string yimMenuPath = System.IO.Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                     "YimMenuV2"
                 );
 
-                // Si la carpeta YimMenuV2 no existe, créala
+                // If the YimMenuV2 folder doesn't exist, create it
                 if (!Directory.Exists(yimMenuPath))
                 {
                     Directory.CreateDirectory(yimMenuPath);
                 }
 
-                // Define la ruta de la carpeta launchpad dentro de YimMenuV2
+                // Define the launchpad folder path inside YimMenuV2
                 string launchpadPath = System.IO.Path.Combine(yimMenuPath, "launchpad");
 
-                // Si la carpeta launchpad no existe, créala
+                // If the launchpad folder doesn't exist, create it
                 if (!Directory.Exists(launchpadPath))
                 {
                     Directory.CreateDirectory(launchpadPath);
                 }
 
-                // Establecer la ruta del archivo de configuración
+                // Set the configuration file path
                 configFilePath = System.IO.Path.Combine(launchpadPath, CONFIG_FILE_NAME);
             }
             catch (Exception ex)
@@ -497,7 +535,7 @@ namespace YimMenuV2_Launchpad
                 }
                 else
                 {
-                    // Si no existe el archivo, usar la configuración por defecto (Epic Games)
+                    // If the file doesn't exist, use default configuration (Epic Games)
                     PlatformComboBox.SelectedIndex = 0;
                     // UpdateStatus("Using default configuration (Epic Games).");
                 }
@@ -505,7 +543,7 @@ namespace YimMenuV2_Launchpad
             catch (Exception ex)
             {
                 UpdateStatus($"Error loading configuration: {ex.Message}");
-                // Usar configuración por defecto en caso de error
+                // Use default configuration in case of error
                 PlatformComboBox.SelectedIndex = 0;
             }
         }
@@ -547,7 +585,7 @@ namespace YimMenuV2_Launchpad
                     }
                 }
 
-                // Si no se encuentra la plataforma, usar la primera por defecto
+                // If platform is not found, use the first one as default
                 PlatformComboBox.SelectedIndex = 0;
             }
             catch (Exception ex)
@@ -559,7 +597,7 @@ namespace YimMenuV2_Launchpad
 
         private void PlatformComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            // Solo guardar si el ComboBox ya está completamente inicializado
+            // Only save if ComboBox is fully initialized
             if (PlatformComboBox.IsLoaded && configFilePath != null)
             {
                 SaveConfiguration();
@@ -594,12 +632,16 @@ namespace YimMenuV2_Launchpad
 
         protected override void OnClosed(EventArgs e)
         {
-            // Guardar configuración antes de cerrar
+            // Save configuration before closing
             SaveConfiguration();
 
-            // Limpiar el timer al cerrar la ventana
+            // Clean up timer when closing window
             processMonitorTimer?.Stop();
             processMonitorTimer = null;
+
+            // Clean up HttpClient
+            httpClient?.Dispose();
+
             base.OnClosed(e);
         }
 
@@ -615,18 +657,18 @@ namespace YimMenuV2_Launchpad
                     string selectedPlatform = content;
                     UpdateStatus($"Launching game via {selectedPlatform}...");
 
-                    // Aquí puedes agregar la lógica específica para cada plataforma
+                    // Here you can add specific logic for each platform
                     switch (selectedPlatform)
                     {
                         case "Epic Games":
-                            // Lógica para Epic Games
+                            // Logic for Epic Games
                             UpdateStatus("Epic Games launcher not implemented yet.");
                             break;
                         case "Steam":
                             LaunchSteamGame();
                             break;
                         case "Rockstar Games":
-                            // Lógica para Rockstar Games
+                            // Logic for Rockstar Games
                             UpdateStatus("Rockstar Games launcher not implemented yet.");
                             break;
                     }
@@ -648,7 +690,7 @@ namespace YimMenuV2_Launchpad
             {
                 UpdateStatus("Starting YimMenuV2 injection...");
 
-                // Construir la ruta del DLL
+                // Build DLL path
                 string yimMenuPath = System.IO.Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                     "YimMenuV2",
@@ -657,7 +699,7 @@ namespace YimMenuV2_Launchpad
 
                 string dllPath = System.IO.Path.Combine(yimMenuPath, "YimMenuV2.dll");
 
-                // Verificar que el DLL existe
+                // Verify that the DLL exists
                 if (!File.Exists(dllPath))
                 {
                     UpdateStatus(
@@ -666,7 +708,7 @@ namespace YimMenuV2_Launchpad
                     return;
                 }
 
-                // Intentar inyectar el DLL en el proceso GTA5_Enhanced.exe
+                // Try to inject DLL into GTA5_Enhanced.exe process
                 string processName = TARGET_PROCESS_NAME;
                 UpdateStatus($"Looking for process: {processName}.exe...");
 
@@ -691,20 +733,236 @@ namespace YimMenuV2_Launchpad
             }
         }
 
-        private void UpdateButton_Click(object sender, RoutedEventArgs e)
+        private async Task<bool> CheckForUpdatesAsync()
         {
             try
             {
                 UpdateStatus("Checking for updates...");
 
-                // Aquí agregas la lógica para verificar y descargar actualizaciones
-                // Puedes usar GitHub API o cualquier otro servicio
+                // Get the latest release information
+                var latestRelease = await GetLatestReleaseAsync();
+                if (latestRelease == null)
+                {
+                    // UpdateStatus("Failed to check for updates from GitHub API");
+                    return false;
+                }
 
-                UpdateStatus("YimMenuV2 is up to date!");
+                // Look for the YimMenuV2.dll asset
+                var dllAsset = latestRelease.Assets.FirstOrDefault(a => a.Name == "YimMenuV2.dll");
+                if (dllAsset == null)
+                {
+                    UpdateStatus("YimMenuV2.dll not found in latest release");
+                    return false;
+                }
+
+                // Extract SHA256 hash from digest field
+                string latestHash = ExtractSha256FromDigest(dllAsset.Digest);
+                if (string.IsNullOrEmpty(latestHash))
+                {
+                    UpdateStatus("Invalid hash format in release data");
+                    return false;
+                }
+
+                // Read local hash
+                string localHash = GetLocalHash();
+
+                // Compare hashes
+                if (localHash.Equals(latestHash, StringComparison.OrdinalIgnoreCase))
+                {
+                    UpdateStatus("YimMenuV2 is up to date!");
+                    return false; // No updates available
+                }
+
+                // An update is available
+                UpdateStatus("New version available! Downloading...");
+                bool downloadSuccess = await DownloadLatestDllAsync(
+                    dllAsset.BrowserDownloadUrl,
+                    latestHash
+                );
+
+                if (downloadSuccess)
+                {
+                    UpdateStatus("✅ YimMenuV2 updated successfully!");
+                    return true;
+                }
+                else
+                {
+                    UpdateStatus("❌ Failed to download update");
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                UpdateStatus($"Error checking for updates: {ex.Message}");
+                return false;
+            }
+        }
+
+        private async Task<GitHubRelease?> GetLatestReleaseAsync()
+        {
+            try
+            {
+                var response = await httpClient.GetStringAsync(GITHUB_API_URL);
+                return JsonConvert.DeserializeObject<GitHubRelease>(response);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error fetching release data: {ex.Message}");
+                UpdateStatus($"Error fetching release data: {ex.Message}");
+                return null;
+            }
+        }
+
+        private string ExtractSha256FromDigest(string digest)
+        {
+            // The digest field has format "sha256:hash"
+            if (digest.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase))
+            {
+                return digest.Substring(7); // Remove "sha256:" from the beginning
+            }
+            return string.Empty;
+        }
+
+        private string GetLocalHash()
+        {
+            try
+            {
+                string yimMenuPath = System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "YimMenuV2",
+                    "launchpad"
+                );
+
+                string hashFilePath = System.IO.Path.Combine(yimMenuPath, HASH_FILE_NAME);
+
+                if (File.Exists(hashFilePath))
+                {
+                    return File.ReadAllText(hashFilePath).Trim();
+                }
+
+                return string.Empty;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error reading local hash: {ex.Message}");
+                return string.Empty;
+            }
+        }
+
+        private void SaveLocalHash(string hash)
+        {
+            try
+            {
+                string yimMenuPath = System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "YimMenuV2",
+                    "launchpad"
+                );
+
+                string hashFilePath = System.IO.Path.Combine(yimMenuPath, HASH_FILE_NAME);
+                File.WriteAllText(hashFilePath, hash);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error saving local hash: {ex.Message}");
+            }
+        }
+
+        private async Task<bool> DownloadLatestDllAsync(string downloadUrl, string expectedHash)
+        {
+            try
+            {
+                string yimMenuPath = System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "YimMenuV2",
+                    "launchpad"
+                );
+
+                string dllPath = System.IO.Path.Combine(yimMenuPath, "YimMenuV2.dll");
+                string tempDllPath = System.IO.Path.Combine(yimMenuPath, "YimMenuV2.dll.tmp");
+
+                // Download the file to a temporary file
+                using (var response = await httpClient.GetAsync(downloadUrl))
+                {
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        UpdateStatus($"Failed to download: HTTP {response.StatusCode}");
+                        return false;
+                    }
+
+                    await using (var fileStream = new FileStream(tempDllPath, FileMode.Create))
+                    {
+                        await response.Content.CopyToAsync(fileStream);
+                    }
+                }
+
+                // Verify the hash of downloaded file
+                string downloadedHash = CalculateFileHash(tempDllPath);
+                if (!downloadedHash.Equals(expectedHash, StringComparison.OrdinalIgnoreCase))
+                {
+                    File.Delete(tempDllPath); // Delete corrupted file
+                    UpdateStatus("Downloaded file hash verification failed");
+                    return false;
+                }
+
+                // Replace existing file
+                if (File.Exists(dllPath))
+                {
+                    File.Delete(dllPath);
+                }
+                File.Move(tempDllPath, dllPath);
+
+                // Save the new hash
+                SaveLocalHash(expectedHash);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                UpdateStatus($"Error downloading DLL: {ex.Message}");
+                return false;
+            }
+        }
+
+        private string CalculateFileHash(string filePath)
+        {
+            try
+            {
+                using (var sha256 = SHA256.Create())
+                {
+                    using (var stream = File.OpenRead(filePath))
+                    {
+                        byte[] hashBytes = sha256.ComputeHash(stream);
+                        return Convert.ToHexString(hashBytes).ToLowerInvariant();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error calculating file hash: {ex.Message}");
+                return string.Empty;
+            }
+        }
+
+        private async void UpdateButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                // Disable button during verification
+                UpdateButton.IsEnabled = false;
+                UpdateButton.Content = "🔄 CHECKING...";
+
+                await CheckForUpdatesAsync();
             }
             catch (Exception ex)
             {
                 UpdateStatus($"Error checking updates: {ex.Message}");
+            }
+            finally
+            {
+                // Re-enable button
+                UpdateButton.IsEnabled = true;
+                UpdateButton.Content = "🔄 UPDATE";
             }
         }
 
@@ -714,7 +972,7 @@ namespace YimMenuV2_Launchpad
             {
                 UpdateStatus("Opening changelog...");
 
-                // Abre el changelog en el navegador predeterminado
+                // Open changelog in default browser
                 string changelogUrl = "https://github.com/YimMenu/YimMenuV2/releases/latest";
                 Process.Start(
                     new ProcessStartInfo { FileName = changelogUrl, UseShellExecute = true }
@@ -734,20 +992,20 @@ namespace YimMenuV2_Launchpad
             {
                 // UpdateStatus("Opening YimMenuV2 folder...");
 
-                // Define la ruta de la carpeta de YimMenuV2
-                // Puedes cambiar esta ruta según donde esté instalado
+                // Define the YimMenuV2 folder path
+                // You can change this path according to where it's installed
                 string yimMenuPath = System.IO.Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                     "YimMenuV2"
                 );
 
-                // Si la carpeta no existe, créala
+                // If the folder doesn't exist, create it
                 if (!Directory.Exists(yimMenuPath))
                 {
                     Directory.CreateDirectory(yimMenuPath);
                 }
 
-                // Abre la carpeta en el explorador de archivos
+                // Open the folder in file explorer
                 Process.Start(
                     new ProcessStartInfo
                     {
