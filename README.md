@@ -1,0 +1,5 @@
+Format:
+
+```
+dotnet csharpier format .
+```
