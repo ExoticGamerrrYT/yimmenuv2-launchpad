@@ -16,7 +16,7 @@ A modern WPF launcher and injector application for [YimMenuV2](https://github.co
 - Windows 10/11
 - .NET 8.0 Runtime
 - GTA V (Epic Games, Steam, or Rockstar Games version)
-- Administrator privileges (recommended for injection)
+- Administrator privileges (in case of error)
 
 ## Download
 
