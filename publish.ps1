@@ -14,7 +14,7 @@ Write-Host "Publicando aplicación..." -ForegroundColor Green
 dotnet publish -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true # exe -> 800kb
 
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "Publicación completada exitosamente." -ForegroundColor Green
+    Write-Host "Success." -ForegroundColor Green
 } else {
-    Write-Host "Error en la publicación." -ForegroundColor Red
+    Write-Host "Error." -ForegroundColor Red
 }
