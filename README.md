@@ -14,7 +14,7 @@ A modern WPF launcher and injector application for [YimMenuV2](https://github.co
 ## Requirements
 
 - Windows 10/11
-- .NET 8.0 Runtime
+- [.NET 8.0 Runtime](https://builds.dotnet.microsoft.com/dotnet/WindowsDesktop/8.0.19/windowsdesktop-runtime-8.0.19-win-x64.exe)
 - GTA V (Epic Games, Steam, or Rockstar Games version)
 - Administrator privileges (in case of error)
 
