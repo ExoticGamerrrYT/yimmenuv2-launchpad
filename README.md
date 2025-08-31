@@ -177,6 +177,7 @@ We welcome contributions! Here's how you can help:
 - [ ] Epic Games Store launcher integration
 - [ ] Rockstar Games Launcher integration
 - [ ] Automatic game detection and launching
+- [ ] Add support for YimMenuV1 (legacy gta)
 
 ## License
 
