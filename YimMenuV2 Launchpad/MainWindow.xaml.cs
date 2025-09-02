@@ -130,6 +130,9 @@ namespace YimMenuV2_Launchpad
         private bool isGameRunning = false;
         private const string TARGET_PROCESS_NAME = "GTA5_Enhanced";
 
+        // Mode selection variable
+        private bool isEnhancedMode = true; // Default to Enhanced mode
+
         // Configuration variables
         private string configFilePath = string.Empty;
         private const string CONFIG_FILE_NAME = "launchpad_config.txt";
@@ -153,6 +156,7 @@ namespace YimMenuV2_Launchpad
             InitializeFolders();
             LoadConfiguration();
             InitializeProcessMonitor();
+            UpdateModeButtonStyles(); // Initialize mode button styles
 
             // Connect the event to save configuration when selection changes
             PlatformComboBox.SelectionChanged += PlatformComboBox_SelectionChanged;
@@ -1026,6 +1030,34 @@ namespace YimMenuV2_Launchpad
         private void UpdateStatus(string message)
         {
             StatusTextBlock.Text = $"{DateTime.Now:HH:mm:ss} - {message}";
+        }
+
+        private void LegacyModeButton_Click(object sender, RoutedEventArgs e)
+        {
+            isEnhancedMode = false;
+            UpdateModeButtonStyles();
+            UpdateStatus("Switched to Legacy mode");
+        }
+
+        private void EnhancedModeButton_Click(object sender, RoutedEventArgs e)
+        {
+            isEnhancedMode = true;
+            UpdateModeButtonStyles();
+            UpdateStatus("Switched to Enhanced mode");
+        }
+
+        private void UpdateModeButtonStyles()
+        {
+            if (isEnhancedMode)
+            {
+                LegacyModeButton.Style = (Style)FindResource("ModeToggleButtonStyle");
+                EnhancedModeButton.Style = (Style)FindResource("ActiveModeToggleButtonStyle");
+            }
+            else
+            {
+                LegacyModeButton.Style = (Style)FindResource("ActiveModeToggleButtonStyle");
+                EnhancedModeButton.Style = (Style)FindResource("ModeToggleButtonStyle");
+            }
         }
     }
 }
