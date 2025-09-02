@@ -156,7 +156,7 @@ namespace YimMenuV2_Launchpad
             InitializeFolders();
             LoadConfiguration();
             InitializeProcessMonitor();
-            UpdateModeButtonStyles(); // Initialize mode button styles
+            UpdateModeButtonStyles(); // Initialize mode button styles after loading configuration
 
             // Connect the event to save configuration when selection changes
             PlatformComboBox.SelectionChanged += PlatformComboBox_SelectionChanged;
@@ -531,7 +531,14 @@ namespace YimMenuV2_Launchpad
                         {
                             string platformName = line.Substring("LastSelectedPlatform=".Length);
                             SetSelectedPlatform(platformName);
-                            break;
+                        }
+                        else if (line.StartsWith("Mode="))
+                        {
+                            string modeValue = line.Substring("Mode=".Length);
+                            isEnhancedMode = modeValue.Equals(
+                                "Enhanced",
+                                StringComparison.OrdinalIgnoreCase
+                            );
                         }
                     }
 
@@ -539,9 +546,10 @@ namespace YimMenuV2_Launchpad
                 }
                 else
                 {
-                    // If the file doesn't exist, use default configuration (Epic Games)
+                    // If the file doesn't exist, use default configuration (Epic Games, Enhanced mode)
                     PlatformComboBox.SelectedIndex = 0;
-                    // UpdateStatus("Using default configuration (Epic Games).");
+                    isEnhancedMode = true;
+                    // UpdateStatus("Using default configuration (Epic Games, Enhanced mode).");
                 }
             }
             catch (Exception ex)
@@ -549,6 +557,7 @@ namespace YimMenuV2_Launchpad
                 UpdateStatus($"Error loading configuration: {ex.Message}");
                 // Use default configuration in case of error
                 PlatformComboBox.SelectedIndex = 0;
+                isEnhancedMode = true;
             }
         }
 
@@ -561,9 +570,10 @@ namespace YimMenuV2_Launchpad
                     && selectedItem.Content is string platformName
                 )
                 {
-                    string configContent = $"LastSelectedPlatform={platformName}";
+                    string modeValue = isEnhancedMode ? "Enhanced" : "Legacy";
+                    string configContent = $"LastSelectedPlatform={platformName}\nMode={modeValue}";
                     File.WriteAllText(configFilePath, configContent);
-                    // UpdateStatus($"Configuration saved - Platform: {platformName}");
+                    // UpdateStatus($"Configuration saved - Platform: {platformName}, Mode: {modeValue}");
                 }
             }
             catch (Exception ex)
@@ -1036,6 +1046,7 @@ namespace YimMenuV2_Launchpad
         {
             isEnhancedMode = false;
             UpdateModeButtonStyles();
+            SaveConfiguration(); // Save the new mode setting
             UpdateStatus("Switched to Legacy mode");
         }
 
@@ -1043,6 +1054,7 @@ namespace YimMenuV2_Launchpad
         {
             isEnhancedMode = true;
             UpdateModeButtonStyles();
+            SaveConfiguration(); // Save the new mode setting
             UpdateStatus("Switched to Enhanced mode");
         }
 
