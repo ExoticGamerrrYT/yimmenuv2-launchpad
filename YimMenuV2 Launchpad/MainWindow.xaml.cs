@@ -128,7 +128,8 @@ namespace YimMenuV2_Launchpad
         // Variables for process monitoring
         private DispatcherTimer? processMonitorTimer;
         private bool isGameRunning = false;
-        private const string TARGET_PROCESS_NAME = "GTA5_Enhanced";
+        private const string TARGET_PROCESS_NAME_ENHANCED = "GTA5_Enhanced";
+        private const string TARGET_PROCESS_NAME_LEGACY = "GTA5";
 
         // Mode selection variable
         private bool isEnhancedMode = true; // Default to Enhanced mode
@@ -136,9 +137,12 @@ namespace YimMenuV2_Launchpad
         // Configuration variables
         private string configFilePath = string.Empty;
         private const string CONFIG_FILE_NAME = "launchpad_config.txt";
-        private const string HASH_FILE_NAME = "hash.txt";
-        private const string GITHUB_API_URL =
+        private const string HASH_FILE_NAME_V2 = "hash_v2.txt";
+        private const string HASH_FILE_NAME_V1 = "hash_v1.txt";
+        private const string GITHUB_API_URL_V2 =
             "https://api.github.com/repos/YimMenu/YimMenuV2/releases/tags/nightly";
+        private const string GITHUB_API_URL_V1 =
+            "https://api.github.com/repos/Mr-X-GTA/YimMenu/releases/tags/nightly";
 
         // HttpClient for HTTP requests
         private static readonly HttpClient httpClient = CreateHttpClient();
@@ -325,7 +329,10 @@ namespace YimMenuV2_Launchpad
         {
             try
             {
-                Process[] processes = Process.GetProcessesByName(TARGET_PROCESS_NAME);
+                string processName = isEnhancedMode
+                    ? TARGET_PROCESS_NAME_ENHANCED
+                    : TARGET_PROCESS_NAME_LEGACY;
+                Process[] processes = Process.GetProcessesByName(processName);
                 bool gameCurrentlyRunning = processes.Length > 0;
 
                 // Only update if state changed
@@ -402,12 +409,15 @@ namespace YimMenuV2_Launchpad
             {
                 UpdateStatus("Attempting to launch GTA V via Steam...");
 
+                // Select the correct Steam App ID based on mode
+                string steamAppId = isEnhancedMode ? "3240220" : "271590";
+
                 // Method 1: Try launching using steam:// protocol
                 try
                 {
                     var steamProcess = new ProcessStartInfo
                     {
-                        FileName = "steam://run/3240220", // Correct App ID for GTA V
+                        FileName = $"steam://run/{steamAppId}",
                         UseShellExecute = true,
                     };
                     Process.Start(steamProcess);
@@ -442,7 +452,7 @@ namespace YimMenuV2_Launchpad
                         var steamProcess = new ProcessStartInfo
                         {
                             FileName = steamPath,
-                            Arguments = "-applaunch 3240220", // GTA V App ID
+                            Arguments = $"-applaunch {steamAppId}",
                             UseShellExecute = false,
                         };
                         Process.Start(steamProcess);
@@ -487,22 +497,13 @@ namespace YimMenuV2_Launchpad
         {
             try
             {
-                // Define the YimMenuV2 folder path
-                string yimMenuPath = System.IO.Path.Combine(
+                // Define the YimMenu Launchpad folder path
+                string launchpadPath = System.IO.Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                    "YimMenuV2"
+                    "YimMenu Launchpad"
                 );
 
-                // If the YimMenuV2 folder doesn't exist, create it
-                if (!Directory.Exists(yimMenuPath))
-                {
-                    Directory.CreateDirectory(yimMenuPath);
-                }
-
-                // Define the launchpad folder path inside YimMenuV2
-                string launchpadPath = System.IO.Path.Combine(yimMenuPath, "launchpad");
-
-                // If the launchpad folder doesn't exist, create it
+                // If the YimMenu Launchpad folder doesn't exist, create it
                 if (!Directory.Exists(launchpadPath))
                 {
                     Directory.CreateDirectory(launchpadPath);
@@ -702,40 +703,51 @@ namespace YimMenuV2_Launchpad
         {
             try
             {
-                UpdateStatus("Starting YimMenuV2 injection...");
+                if (isEnhancedMode)
+                {
+                    UpdateStatus("Starting YimMenuV2 injection...");
+                }
+                else
+                {
+                    UpdateStatus("Starting YimMenu injection...");
+                }
 
-                // Build DLL path
-                string yimMenuPath = System.IO.Path.Combine(
+                // Build DLL path based on mode
+                string launchpadPath = System.IO.Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                    "YimMenuV2",
-                    "launchpad"
+                    "YimMenu Launchpad"
                 );
 
-                string dllPath = System.IO.Path.Combine(yimMenuPath, "YimMenuV2.dll");
+                string dllFileName = isEnhancedMode ? "YimMenuV2.dll" : "YimMenu.dll";
+                string dllPath = System.IO.Path.Combine(launchpadPath, dllFileName);
 
                 // Verify that the DLL exists
                 if (!File.Exists(dllPath))
                 {
                     UpdateStatus(
-                        $"❌ Error: YimMenuV2.dll not found in {yimMenuPath}. Please download and place the DLL in the launchpad folder."
+                        $"❌ Error: {dllFileName} not found in {launchpadPath}. Please download and place the DLL in the launchpad folder."
                     );
                     return;
                 }
 
-                // Try to inject DLL into GTA5_Enhanced.exe process
-                string processName = TARGET_PROCESS_NAME;
+                // Select process name based on mode
+                string processName = isEnhancedMode
+                    ? TARGET_PROCESS_NAME_ENHANCED
+                    : TARGET_PROCESS_NAME_LEGACY;
                 UpdateStatus($"Looking for process: {processName}.exe...");
 
                 bool injectionSuccess = InjectDLL(processName, dllPath);
 
                 if (injectionSuccess)
                 {
-                    UpdateStatus("✅ YimMenuV2 injected successfully into GTA5_Enhanced.exe!");
+                    string menuName = isEnhancedMode ? "YimMenuV2" : "YimMenu";
+                    UpdateStatus($"✅ {menuName} injected successfully into {processName}.exe!");
                 }
                 else
                 {
+                    string menuName = isEnhancedMode ? "YimMenuV2" : "YimMenu";
                     UpdateStatus(
-                        "❌ Failed to inject YimMenuV2. Common issues: Game not running, insufficient permissions, or antivirus blocking."
+                        $"❌ Failed to inject {menuName}. Common issues: Game not running, insufficient permissions, or antivirus blocking."
                     );
                 }
             }
@@ -753,7 +765,7 @@ namespace YimMenuV2_Launchpad
             {
                 UpdateStatus("Checking for updates...");
 
-                // Get the latest release information
+                // Get the latest release information based on mode
                 var latestRelease = await GetLatestReleaseAsync();
                 if (latestRelease?.Assets == null)
                 {
@@ -761,11 +773,12 @@ namespace YimMenuV2_Launchpad
                     return false;
                 }
 
-                // Look for the YimMenuV2.dll asset
-                var dllAsset = latestRelease.Assets.FirstOrDefault(a => a.Name == "YimMenuV2.dll");
+                // Look for the appropriate DLL asset based on mode
+                string dllFileName = isEnhancedMode ? "YimMenuV2.dll" : "YimMenu.dll";
+                var dllAsset = latestRelease.Assets.FirstOrDefault(a => a.Name == dllFileName);
                 if (dllAsset == null)
                 {
-                    UpdateStatus("YimMenuV2.dll not found in latest release");
+                    UpdateStatus($"{dllFileName} not found in latest release");
                     return false;
                 }
 
@@ -783,7 +796,8 @@ namespace YimMenuV2_Launchpad
                 // Compare hashes
                 if (localHash.Equals(latestHash, StringComparison.OrdinalIgnoreCase))
                 {
-                    UpdateStatus("YimMenuV2 is up to date!");
+                    string menuName = isEnhancedMode ? "YimMenuV2" : "YimMenu";
+                    UpdateStatus($"{menuName} is up to date!");
                     return false; // No updates available
                 }
 
@@ -796,7 +810,8 @@ namespace YimMenuV2_Launchpad
 
                 if (downloadSuccess)
                 {
-                    UpdateStatus("✅ YimMenuV2 updated successfully!");
+                    string menuName = isEnhancedMode ? "YimMenuV2" : "YimMenu";
+                    UpdateStatus($"✅ {menuName} updated successfully!");
                     return true;
                 }
                 else
@@ -816,7 +831,8 @@ namespace YimMenuV2_Launchpad
         {
             try
             {
-                var response = await httpClient.GetStringAsync(GITHUB_API_URL);
+                string apiUrl = isEnhancedMode ? GITHUB_API_URL_V2 : GITHUB_API_URL_V1;
+                var response = await httpClient.GetStringAsync(apiUrl);
                 return JsonConvert.DeserializeObject<GitHubRelease>(response);
             }
             catch (Exception ex)
@@ -841,13 +857,13 @@ namespace YimMenuV2_Launchpad
         {
             try
             {
-                string yimMenuPath = System.IO.Path.Combine(
+                string launchpadPath = System.IO.Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                    "YimMenuV2",
-                    "launchpad"
+                    "YimMenu Launchpad"
                 );
 
-                string hashFilePath = System.IO.Path.Combine(yimMenuPath, HASH_FILE_NAME);
+                string hashFileName = isEnhancedMode ? HASH_FILE_NAME_V2 : HASH_FILE_NAME_V1;
+                string hashFilePath = System.IO.Path.Combine(launchpadPath, hashFileName);
 
                 if (File.Exists(hashFilePath))
                 {
@@ -867,13 +883,13 @@ namespace YimMenuV2_Launchpad
         {
             try
             {
-                string yimMenuPath = System.IO.Path.Combine(
+                string launchpadPath = System.IO.Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                    "YimMenuV2",
-                    "launchpad"
+                    "YimMenu Launchpad"
                 );
 
-                string hashFilePath = System.IO.Path.Combine(yimMenuPath, HASH_FILE_NAME);
+                string hashFileName = isEnhancedMode ? HASH_FILE_NAME_V2 : HASH_FILE_NAME_V1;
+                string hashFilePath = System.IO.Path.Combine(launchpadPath, hashFileName);
                 File.WriteAllText(hashFilePath, hash);
             }
             catch (Exception ex)
@@ -886,14 +902,14 @@ namespace YimMenuV2_Launchpad
         {
             try
             {
-                string yimMenuPath = System.IO.Path.Combine(
+                string launchpadPath = System.IO.Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                    "YimMenuV2",
-                    "launchpad"
+                    "YimMenu Launchpad"
                 );
 
-                string dllPath = System.IO.Path.Combine(yimMenuPath, "YimMenuV2.dll");
-                string tempDllPath = System.IO.Path.Combine(yimMenuPath, "YimMenuV2.dll.tmp");
+                string dllFileName = isEnhancedMode ? "YimMenuV2.dll" : "YimMenu.dll";
+                string dllPath = System.IO.Path.Combine(launchpadPath, dllFileName);
+                string tempDllPath = System.IO.Path.Combine(launchpadPath, dllFileName + ".tmp");
 
                 // Download the file to a temporary file
                 using (var response = await httpClient.GetAsync(downloadUrl))
@@ -986,8 +1002,17 @@ namespace YimMenuV2_Launchpad
             {
                 UpdateStatus("Opening changelog...");
 
-                // Open changelog in default browser
-                string changelogUrl = "https://github.com/YimMenu/YimMenuV2/releases/latest";
+                // Open changelog in default browser based on mode
+                string changelogUrl;
+                if (isEnhancedMode)
+                {
+                    changelogUrl = "https://github.com/YimMenu/YimMenuV2/releases/latest";
+                }
+                else
+                {
+                    changelogUrl = "https://github.com/Mr-X-GTA/YimMenu/releases/tag/nightly";
+                }
+
                 Process.Start(
                     new ProcessStartInfo { FileName = changelogUrl, UseShellExecute = true }
                 );
@@ -1006,24 +1031,35 @@ namespace YimMenuV2_Launchpad
             {
                 // UpdateStatus("Opening YimMenuV2 folder...");
 
-                // Define the YimMenuV2 folder path
-                // You can change this path according to where it's installed
-                string yimMenuPath = System.IO.Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                    "YimMenuV2"
-                );
+                string folderPath;
+                if (isEnhancedMode)
+                {
+                    // Enhanced mode: open YimMenu Launchpad folder
+                    folderPath = System.IO.Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                        "YimMenuV2"
+                    );
+                }
+                else
+                {
+                    // Legacy mode: open YimMenu folder
+                    folderPath = System.IO.Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                        "YimMenu"
+                    );
+                }
 
                 // If the folder doesn't exist, create it
-                if (!Directory.Exists(yimMenuPath))
+                if (!Directory.Exists(folderPath))
                 {
-                    Directory.CreateDirectory(yimMenuPath);
+                    Directory.CreateDirectory(folderPath);
                 }
 
                 // Open the folder in file explorer
                 Process.Start(
                     new ProcessStartInfo
                     {
-                        FileName = yimMenuPath,
+                        FileName = folderPath,
                         UseShellExecute = true,
                         Verb = "open",
                     }
@@ -1042,20 +1078,26 @@ namespace YimMenuV2_Launchpad
             StatusTextBlock.Text = $"{DateTime.Now:HH:mm:ss} - {message}";
         }
 
-        private void LegacyModeButton_Click(object sender, RoutedEventArgs e)
+        private async void LegacyModeButton_Click(object sender, RoutedEventArgs e)
         {
             isEnhancedMode = false;
             UpdateModeButtonStyles();
             SaveConfiguration(); // Save the new mode setting
             UpdateStatus("Switched to Legacy mode");
+
+            // Check for updates for the newly selected mode
+            _ = CheckForUpdatesAsync();
         }
 
-        private void EnhancedModeButton_Click(object sender, RoutedEventArgs e)
+        private async void EnhancedModeButton_Click(object sender, RoutedEventArgs e)
         {
             isEnhancedMode = true;
             UpdateModeButtonStyles();
             SaveConfiguration(); // Save the new mode setting
             UpdateStatus("Switched to Enhanced mode");
+
+            // Check for updates for the newly selected mode
+            _ = CheckForUpdatesAsync();
         }
 
         private void UpdateModeButtonStyles()
