@@ -6,7 +6,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:local="clr-namespace:YimMenuV2_Launchpad"
     mc:Ignorable="d"
-    Title="YimMenuV2 Launchpad"
+    Title="YimMenu Launchpad"
     Height="550"
     Width="450"
     Background="#1A1A1A"
@@ -215,9 +215,83 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <!-- Mode Toggle Button Style -->
+        <Style x:Key="ModeToggleButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#2D2D30" />
+            <Setter Property="Foreground" Value="#E0E0E0" />
+            <Setter Property="BorderBrush" Value="#3F3F46" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="15,8" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="4"
+                        >
+                            <ContentPresenter
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                            />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#383838" />
+                                <Setter Property="BorderBrush" Value="#5A5A5A" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="#404040" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- Active Mode Toggle Button Style -->
+        <Style
+            x:Key="ActiveModeToggleButtonStyle"
+            TargetType="Button"
+            BasedOn="{StaticResource ModeToggleButtonStyle}"
+        >
+            <Setter Property="Background" Value="#0078D4" />
+            <Setter Property="BorderBrush" Value="#106EBE" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="4"
+                        >
+                            <ContentPresenter
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                            />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#1084D6" />
+                                <Setter Property="BorderBrush" Value="#1F7BC7" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="#0E6CB8" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
     <Grid Margin="30">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="20" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="20" />
             <RowDefinition Height="Auto" />
@@ -232,15 +306,39 @@
         <!-- Header -->
         <TextBlock
             Grid.Row="0"
-            Text="YimMenuV2 Launchpad"
+            Text="YimMenu Launchpad"
             FontSize="24"
             FontWeight="Bold"
             Foreground="#E0E0E0"
             HorizontalAlignment="Center"
             Margin="0,0,0,20"
         />
-        <!-- Launch Row: Button + Platform Dropdown -->
+        <!-- Mode Selection -->
         <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="5" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Button
+                Grid.Column="0"
+                Name="LegacyModeButton"
+                Content="LEGACY"
+                Style="{StaticResource ModeToggleButtonStyle}"
+                Height="35"
+                Click="LegacyModeButton_Click"
+            />
+            <Button
+                Grid.Column="2"
+                Name="EnhancedModeButton"
+                Content="ENHANCED"
+                Style="{StaticResource ActiveModeToggleButtonStyle}"
+                Height="35"
+                Click="EnhancedModeButton_Click"
+            />
+        </Grid>
+        <!-- Launch Row: Button + Platform Dropdown -->
+        <Grid Grid.Row="4">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="1.5*" />
                 <ColumnDefinition Width="10" />
@@ -268,49 +366,34 @@
         </Grid>
         <!-- Inject Button -->
         <Button
-            Grid.Row="4"
+            Grid.Row="6"
             Name="InjectButton"
             Content="💉 INJECT"
             Style="{StaticResource ModernButtonStyle}"
             Height="40"
             Click="InjectButton_Click"
         />
-        <!-- Update and Changelog Row -->
-        <Grid Grid.Row="6">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="10" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            <Button
-                Grid.Column="0"
-                Name="UpdateButton"
-                Content="🔄 UPDATE"
-                Style="{StaticResource ModernButtonStyle}"
-                Height="40"
-                Click="UpdateButton_Click"
-            />
-            <Button
-                Grid.Column="2"
-                Name="ChangelogButton"
-                Content="📋 CHANGELOG"
-                Style="{StaticResource ModernButtonStyle}"
-                Height="40"
-                Click="ChangelogButton_Click"
-            />
-        </Grid>
-        <!-- Open Folder Button -->
+        <!-- Changelog Button -->
         <Button
             Grid.Row="8"
+            Name="ChangelogButton"
+            Content="📋 CHANGELOG"
+            Style="{StaticResource ModernButtonStyle}"
+            Height="40"
+            Click="ChangelogButton_Click"
+        />
+        <!-- Open Folder Button -->
+        <Button
+            Grid.Row="10"
             Name="OpenFolderButton"
-            Content="📁 OPEN YIMENUV2 FOLDER"
+            Content="📁 OPEN YIMENU FOLDER"
             Style="{StaticResource ModernButtonStyle}"
             Height="40"
             Click="OpenFolderButton_Click"
         />
         <!-- Status Bar -->
         <Border
-            Grid.Row="9"
+            Grid.Row="11"
             Background="#252526"
             BorderBrush="#3F3F46"
             BorderThickness="1"
