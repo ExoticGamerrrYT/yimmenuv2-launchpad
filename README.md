@@ -1,15 +1,15 @@
-# YimMenuV2 Launchpad
+# YimMenu Launchpad
 
-A modern WPF launcher and injector application for [YimMenuV2](https://github.com/YimMenu/YimMenuV2), designed to simplify the process of launching GTA V and injecting the YimMenuV2 mod menu.
+A modern WPF launcher and injector application for YimMenu ([legacy](https://github.com/Mr-X-GTA/YimMenu) and [enhanced](https://github.com/YimMenu/YimMenuV2)), designed to simplify the process of launching GTA V and injecting the YimMenu mod menu.
 
 ## Features
 
-- **Multi-Platform Support**: Launch GTA V through Epic Games, Steam, or Rockstar Games Launcher
-- **Automatic Updates**: Automatically checks for and downloads the latest YimMenuV2 releases
+- **Multi-Platform Support**: Launch GTA V through ~~Epic Games~~, Steam, or ~~Rockstar Games Launcher~~
+- **Automatic Updates**: Automatically checks for and downloads the latest YimMenu releases
 - **Smart Process Detection**: Monitors game process status and adapts UI accordingly
 - **One-Click Injection**: Simple DLL injection into the running GTA V process
 - **Modern Dark UI**: Clean, modern interface with Windows 11 styling
-- **Configuration Persistence**: Remembers your platform preference
+- **Configuration Persistence**: Remembers your platform and version preference
 
 ## Requirements
 
@@ -43,17 +43,17 @@ Download the latest release from the [Releases](https://github.com/ExoticGamerrr
 
 1. Download or build the application
 2. Extract to your desired location
-3. Run `YimMenuV2 Launchpad.exe`
-4. The application will automatically create necessary folders in `%APPDATA%\YimMenuV2\launchpad`
+3. Run `YimMenu Launchpad.exe`
+4. The application will automatically create necessary folders in `%APPDATA%\YimMenu Launchpad\`
 
 ## Usage
+
+> Remember that BE **must** be disabled in your platform in order to use YimMenu
 
 ### First Time Setup
 
 1. Launch the application
-2. Select your preferred platform (Epic Games, Steam, or Rockstar Games)
-3. Click **UPDATE** to download the latest YimMenuV2.dll
-4. Wait for the download to complete
+2. Select your preferred platform (~~Epic Games~~, Steam, or ~~Rockstar Games~~)
 
 ### Launching GTA V
 
@@ -61,27 +61,24 @@ Download the latest release from the [Releases](https://github.com/ExoticGamerrr
 2. Click **🚀 LAUNCH** to start GTA V
 3. Wait for the game to fully load
 
-### Injecting YimMenuV2
+### Injecting YimMenu
 
-1. Ensure GTA V is running and fully loaded
-2. Click **💉 INJECT** to inject YimMenuV2 into the game process
+1. Ensure GTA V is running and in the main menu
+2. Click **💉 INJECT** to automatically update and inject YimMenu into the game process
 3. The button will be highlighted when the game is detected
 
 ### Additional Features
 
-- **🔄 UPDATE**: Check for and download YimMenuV2 updates
 - **📋 CHANGELOG**: View the latest release notes
-- **📁 OPEN YIMENUV2 FOLDER**: Open the YimMenuV2 configuration folder
+- **📁 OPEN YIMENU FOLDER**: Open the YimMenuV2 configuration folder
 
 ## File Structure
 
 ```
-%APPDATA%\YimMenuV2\
-├── launchpad\
-│   ├── YimMenuV2.dll          # The mod menu DLL
-│   ├── hash.txt               # File hash for update verification
-│   └── launchpad_config.txt   # Application configuration
-└── (YimMenuV2 configuration files)
+%APPDATA%\YimMenu Launchpad\
+├── YimMenu/YimMenuV2.dll      # The mod menu DLL
+├── hash_v1/hash_v2.txt        # File hash for update verification
+├── launchpad_config.txt       # Application configuration
 ```
 
 ## Troubleshooting
@@ -96,12 +93,11 @@ Download the latest release from the [Releases](https://github.com/ExoticGamerrr
 
 **"DLL not found" error:**
 
-- Click the **UPDATE** button to download YimMenuV2.dll
-- Check that antivirus isn't blocking the download
-- Manually place YimMenuV2.dll in `%APPDATA%\YimMenuV2\launchpad\`
+- Check that antivirus isn't blocking the download and re-inject
 
 **Injection fails:**
 
+- Check if BE is disabled for you platform
 - Run the launchpad as administrator
 - Temporarily disable antivirus software
 - Ensure no other mod menus are already injected
@@ -141,6 +137,8 @@ We welcome contributions! Here's how you can help:
 4. Format your code:
    ```bash
    dotnet csharpier format .
+   or
+   ./format.ps1 (from root)
    ```
 5. Test your changes thoroughly
 6. Commit with clear, descriptive messages
@@ -174,14 +172,15 @@ We welcome contributions! Here's how you can help:
 
 ## Roadmap
 
+- [x] Add support for YimMenuV1 (legacy gta)
+- [ ] Add BE is not disabled message in launcher when injection fails
 - [ ] Epic Games Store launcher integration
 - [ ] Rockstar Games Launcher integration
 - [ ] Automatic game detection and launching
-- [ ] Add support for YimMenuV1 (legacy gta)
 
 ## License
 
-<a href="https://github.com/ExoticGamerrrYT/yimmenuv2-launchpad">YimMenuV2 Launchpad</a> © 2025 by <a href="https://github.com/ExoticGamerrrYT">ExoticGamerrrYT</a> is licensed under <a href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC 4.0</a><img src="https://mirrors.creativecommons.org/presskit/icons/cc.svg" alt="" style="max-width: 1em;max-height:1em;margin-left: .2em;"><img src="https://mirrors.creativecommons.org/presskit/icons/by.svg" alt="" style="max-width: 1em;max-height:1em;margin-left: .2em;"><img src="https://mirrors.creativecommons.org/presskit/icons/nc.svg" alt="" style="max-width: 1em;max-height:1em;margin-left: .2em;">
+<a href="https://github.com/ExoticGamerrrYT/yimmenuv2-launchpad">YimMenu Launchpad</a> © 2025 by <a href="https://github.com/ExoticGamerrrYT">ExoticGamerrrYT</a> is licensed under <a href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC 4.0</a><img src="https://mirrors.creativecommons.org/presskit/icons/cc.svg" alt="" style="max-width: 1em;max-height:1em;margin-left: .2em;"><img src="https://mirrors.creativecommons.org/presskit/icons/by.svg" alt="" style="max-width: 1em;max-height:1em;margin-left: .2em;"><img src="https://mirrors.creativecommons.org/presskit/icons/nc.svg" alt="" style="max-width: 1em;max-height:1em;margin-left: .2em;">
 
 ## Disclaimer
 
@@ -189,5 +188,5 @@ This project is not affiliated with YimMenu or Take-Two Interactive. Use at your
 
 ## Acknowledgments
 
-- [YimMenu Team](https://github.com/YimMenu) for creating YimMenuV2
+- [YimMenu Team](https://github.com/YimMenu) for creating YimMenu
 - [Newtonsoft.Json](https://github.com/JamesNK/Newtonsoft.Json) for JSON parsing
