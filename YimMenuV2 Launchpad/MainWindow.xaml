@@ -6,7 +6,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:local="clr-namespace:YimMenuV2_Launchpad"
     mc:Ignorable="d"
-    Title="YimMenuV2 Launchpad"
+    Title="YimMenu Launchpad"
     Height="550"
     Width="450"
     Background="#1A1A1A"
@@ -306,7 +306,7 @@
         <!-- Header -->
         <TextBlock
             Grid.Row="0"
-            Text="YimMenuV2 Launchpad"
+            Text="YimMenu Launchpad"
             FontSize="24"
             FontWeight="Bold"
             Foreground="#E0E0E0"
@@ -386,7 +386,7 @@
         <Button
             Grid.Row="10"
             Name="OpenFolderButton"
-            Content="📁 OPEN YIMENUV2 FOLDER"
+            Content="📁 OPEN YIMENU FOLDER"
             Style="{StaticResource ModernButtonStyle}"
             Height="40"
             Click="OpenFolderButton_Click"

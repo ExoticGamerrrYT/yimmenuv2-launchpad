@@ -1062,7 +1062,7 @@ namespace YimMenuV2_Launchpad
                     }
                 );
 
-                UpdateStatus("YimMenuV2 folder opened");
+                UpdateStatus("YimMenu folder opened");
             }
             catch (Exception ex)
             {
