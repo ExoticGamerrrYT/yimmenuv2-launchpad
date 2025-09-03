@@ -164,9 +164,6 @@ namespace YimMenuV2_Launchpad
 
             // Connect the event to save configuration when selection changes
             PlatformComboBox.SelectionChanged += PlatformComboBox_SelectionChanged;
-
-            // Check for updates on startup
-            _ = CheckForUpdatesAsync();
         }
 
         private bool InjectDLL(string processName, string dllPath)
@@ -699,10 +696,26 @@ namespace YimMenuV2_Launchpad
             }
         }
 
-        private void InjectButton_Click(object sender, RoutedEventArgs e)
+        private async void InjectButton_Click(object sender, RoutedEventArgs e)
         {
             try
             {
+                // Disable inject button during the process
+                InjectButton.IsEnabled = false;
+                InjectButton.Content = "🔄 CHECKING...";
+
+                if (isEnhancedMode)
+                {
+                    UpdateStatus("Checking for YimMenuV2 updates...");
+                }
+                else
+                {
+                    UpdateStatus("Checking for YimMenu updates...");
+                }
+
+                // Check for updates first
+                bool updateAvailable = await CheckForUpdatesAsync();
+
                 if (isEnhancedMode)
                 {
                     UpdateStatus("Starting YimMenuV2 injection...");
@@ -756,6 +769,12 @@ namespace YimMenuV2_Launchpad
                 UpdateStatus(
                     $"❌ Critical error during injection: {ex.Message}. Try running as administrator."
                 );
+            }
+            finally
+            {
+                // Re-enable inject button
+                InjectButton.IsEnabled = true;
+                InjectButton.Content = "💉 INJECT";
             }
         }
 
@@ -974,28 +993,6 @@ namespace YimMenuV2_Launchpad
             }
         }
 
-        private async void UpdateButton_Click(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                // Disable button during verification
-                UpdateButton.IsEnabled = false;
-                UpdateButton.Content = "🔄 CHECKING...";
-
-                await CheckForUpdatesAsync();
-            }
-            catch (Exception ex)
-            {
-                UpdateStatus($"Error checking updates: {ex.Message}");
-            }
-            finally
-            {
-                // Re-enable button
-                UpdateButton.IsEnabled = true;
-                UpdateButton.Content = "🔄 UPDATE";
-            }
-        }
-
         private void ChangelogButton_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -1078,26 +1075,20 @@ namespace YimMenuV2_Launchpad
             StatusTextBlock.Text = $"{DateTime.Now:HH:mm:ss} - {message}";
         }
 
-        private async void LegacyModeButton_Click(object sender, RoutedEventArgs e)
+        private void LegacyModeButton_Click(object sender, RoutedEventArgs e)
         {
             isEnhancedMode = false;
             UpdateModeButtonStyles();
             SaveConfiguration(); // Save the new mode setting
             UpdateStatus("Switched to Legacy mode");
-
-            // Check for updates for the newly selected mode
-            _ = CheckForUpdatesAsync();
         }
 
-        private async void EnhancedModeButton_Click(object sender, RoutedEventArgs e)
+        private void EnhancedModeButton_Click(object sender, RoutedEventArgs e)
         {
             isEnhancedMode = true;
             UpdateModeButtonStyles();
             SaveConfiguration(); // Save the new mode setting
             UpdateStatus("Switched to Enhanced mode");
-
-            // Check for updates for the newly selected mode
-            _ = CheckForUpdatesAsync();
         }
 
         private void UpdateModeButtonStyles()

@@ -373,30 +373,15 @@
             Height="40"
             Click="InjectButton_Click"
         />
-        <!-- Update and Changelog Row -->
-        <Grid Grid.Row="8">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="10" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            <Button
-                Grid.Column="0"
-                Name="UpdateButton"
-                Content="🔄 UPDATE"
-                Style="{StaticResource ModernButtonStyle}"
-                Height="40"
-                Click="UpdateButton_Click"
-            />
-            <Button
-                Grid.Column="2"
-                Name="ChangelogButton"
-                Content="📋 CHANGELOG"
-                Style="{StaticResource ModernButtonStyle}"
-                Height="40"
-                Click="ChangelogButton_Click"
-            />
-        </Grid>
+        <!-- Changelog Button -->
+        <Button
+            Grid.Row="8"
+            Name="ChangelogButton"
+            Content="📋 CHANGELOG"
+            Style="{StaticResource ModernButtonStyle}"
+            Height="40"
+            Click="ChangelogButton_Click"
+        />
         <!-- Open Folder Button -->
         <Button
             Grid.Row="10"
